@@ -38,10 +38,12 @@ if branch_filter:
     filtered_data = filtered_data[filtered_data['Branch'].isin(branch_filter)]
 if product_filter:
     filtered_data = filtered_data[filtered_data['Product line'].isin(product_filter)]
-if date_filter:
-    if isinstance(date_filter, list) and len(date_filter) == 2:
-        filtered_data = filtered_data[(filtered_data['Date'] >= pd.to_datetime(date_filter[0])) & 
-                                      (filtered_data['Date'] <= pd.to_datetime(date_filter[1]))]
+if date_filter and len(date_filter) == 2:
+    filtered_data = filtered_data[(filtered_data['Date'] >= pd.to_datetime(date_filter[0])) & 
+                                  (filtered_data['Date'] <= pd.to_datetime(date_filter[1]))]
+
+# Ensure Customer and Total columns are intact
+st.write("Columns after filtering:", filtered_data.columns)
 
 # Dataset Overview
 if options == "Dataset Overview":
@@ -151,15 +153,28 @@ if options == "Advanced Insights":
 
     # Customer Segmentation (RFM)
     st.subheader("Customer Segmentation (RFM Analysis)")
-    rfm = filtered_data.groupby('Customer')['Date'].agg(['max', 'count']).reset_index()
-    rfm['Recency'] = (pd.to_datetime('today') - rfm['max']).dt.days
-    rfm['Frequency'] = rfm['count']
-    rfm['Monetary'] = filtered_data.groupby('Customer')['Total'].sum().values
 
-    fig = px.scatter(rfm, x='Recency', y='Frequency', size='Monetary', title="Customer Segmentation (RFM)",
-                     labels={"Recency": "Days Since Last Purchase", "Frequency": "Purchase Frequency"})
-    st.plotly_chart(fig)
+    if 'Customer' in filtered_data.columns and 'Total' in filtered_data.columns:
+        # Ensure 'Date' column is in datetime format
+        filtered_data['Date'] = pd.to_datetime(filtered_data['Date'])
+        
+        # Group by Customer and calculate RFM metrics
+        rfm = filtered_data.groupby('Customer').agg(
+            Recency=('Date', lambda x: (pd.to_datetime('today') - x.max()).days),
+            Frequency=('Date', 'count'),
+            Monetary=('Total', 'sum')
+        ).reset_index()
+
+        # Plot RFM analysis
+        fig = px.scatter(rfm, x='Recency', y='Frequency', size='Monetary', 
+                         title="Customer Segmentation (RFM)",
+                         labels={"Recency": "Days Since Last Purchase", 
+                                 "Frequency": "Purchase Frequency",
+                                 "Monetary": "Total Sales ($)"})
+        st.plotly_chart(fig)
+    else:
+        st.write("The dataset does not contain sufficient 'Customer' or 'Total' information for RFM analysis.")
 
 # Footer
 st.sidebar.markdown("---")
-st.sidebar.markdown("**Developed by [KEVIN]**")
+st.sidebar.markdown("**Developed by [KEVIN DAI]**")
