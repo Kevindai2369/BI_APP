@@ -38,12 +38,10 @@ if branch_filter:
     filtered_data = filtered_data[filtered_data['Branch'].isin(branch_filter)]
 if product_filter:
     filtered_data = filtered_data[filtered_data['Product line'].isin(product_filter)]
-if date_filter and len(date_filter) == 2:
-    filtered_data = filtered_data[(filtered_data['Date'] >= pd.to_datetime(date_filter[0])) & 
-                                  (filtered_data['Date'] <= pd.to_datetime(date_filter[1]))]
-
-# Ensure Customer and Total columns are intact
-st.write("Columns after filtering:", filtered_data.columns)
+if date_filter:
+    if isinstance(date_filter, list) and len(date_filter) == 2:
+        filtered_data = filtered_data[(filtered_data['Date'] >= pd.to_datetime(date_filter[0])) & 
+                                      (filtered_data['Date'] <= pd.to_datetime(date_filter[1]))]
 
 # Dataset Overview
 if options == "Dataset Overview":
@@ -151,30 +149,22 @@ if options == "Advanced Insights":
     else:
         st.write("Cost data is not available for Gross Margin Analysis.")
 
-    # Customer Segmentation (RFM)
-    st.subheader("Customer Segmentation (RFM Analysis)")
-
-    if 'Customer' in filtered_data.columns and 'Total' in filtered_data.columns:
-        # Ensure 'Date' column is in datetime format
-        filtered_data['Date'] = pd.to_datetime(filtered_data['Date'])
-        
-        # Group by Customer and calculate RFM metrics
-        rfm = filtered_data.groupby('Customer').agg(
-            Recency=('Date', lambda x: (pd.to_datetime('today') - x.max()).days),
-            Frequency=('Date', 'count'),
+    # Custom Type Segmentation (RFM)
+    st.subheader("Custom Type Segmentation (RFM Analysis)")
+    if 'Custom type' in filtered_data.columns:
+        # Aggregate metrics for each custom type
+        rfm = filtered_data.groupby('Custom type').agg(
+            Recency=('Date', lambda x: (pd.to_datetime('today') - pd.to_datetime(x).max()).days),
+            Frequency=('Invoice ID', 'count'),  # Assuming 'Invoice ID' indicates transactions
             Monetary=('Total', 'sum')
         ).reset_index()
 
-        # Plot RFM analysis
-        fig = px.scatter(rfm, x='Recency', y='Frequency', size='Monetary', 
-                         title="Customer Segmentation (RFM)",
-                         labels={"Recency": "Days Since Last Purchase", 
+        # Visualize the segmentation
+        fig = px.scatter(rfm, x='Recency', y='Frequency', size='Monetary',
+                         color='Custom type', title="Custom Type Segmentation (RFM)",
+                         labels={"Recency": "Days Since Last Purchase",
                                  "Frequency": "Purchase Frequency",
-                                 "Monetary": "Total Sales ($)"})
+                                 "Monetary": "Total Monetary Value"})
         st.plotly_chart(fig)
     else:
-        st.write("The dataset does not contain sufficient 'Customer' or 'Total' information for RFM analysis.")
-
-# Footer
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Developed by [KEVIN DAI]**")
+        st.write("The dataset does not contain 'Custom type' information for segmentation.")
