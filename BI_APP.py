@@ -139,32 +139,27 @@ if options == "Advanced Insights":
 
     # Gross Margin Analysis
     st.subheader("Gross Margin Analysis")
-    if 'Cost' in filtered_data.columns:
-        filtered_data['Gross Margin'] = (filtered_data['Total'] - filtered_data['Cost']) / filtered_data['Total'] * 100
-        margin_summary = filtered_data.groupby('Product line')['Gross Margin'].mean().reset_index()
+    filtered_data['Gross Margin'] = (filtered_data['Total'] - filtered_data['cogs']) / filtered_data['Total'] * 100
+    margin_summary = filtered_data.groupby('Product line')['Gross Margin'].mean().reset_index()
 
-        fig = px.bar(margin_summary, x='Product line', y='Gross Margin', title="Average Gross Margin by Product Line",
-                     labels={"Gross Margin": "Gross Margin (%)"})
-        st.plotly_chart(fig)
-    else:
-        st.write("Cost data is not available for Gross Margin Analysis.")
+    fig = px.bar(margin_summary, x='Product line', y='Gross Margin', title="Average Gross Margin by Product Line",
+                 labels={"Gross Margin": "Gross Margin (%)"})
+    st.plotly_chart(fig)
 
-    # Custom Type Segmentation (RFM)
-    st.subheader("Custom Type Segmentation (RFM Analysis)")
-    if 'Custom type' in filtered_data.columns:
-        # Aggregate metrics for each custom type
-        rfm = filtered_data.groupby('Custom type').agg(
-            Recency=('Date', lambda x: (pd.to_datetime('today') - pd.to_datetime(x).max()).days),
-            Frequency=('Invoice ID', 'count'),  # Assuming 'Invoice ID' indicates transactions
-            Monetary=('Total', 'sum')
-        ).reset_index()
+    # RFM Analysis using 'Customer type'
+    st.subheader("Customer Segmentation (RFM Analysis)")
+    rfm = filtered_data.groupby('Customer type').agg(
+        Recency=('Date', lambda x: (pd.to_datetime('today') - pd.to_datetime(x).max()).days),
+        Frequency=('Invoice ID', 'count'),  # Assuming 'Invoice ID' indicates transactions
+        Monetary=('Total', 'sum')
+    ).reset_index()
 
-        # Visualize the segmentation
-        fig = px.scatter(rfm, x='Recency', y='Frequency', size='Monetary',
-                         color='Custom type', title="Custom Type Segmentation (RFM)",
-                         labels={"Recency": "Days Since Last Purchase",
-                                 "Frequency": "Purchase Frequency",
-                                 "Monetary": "Total Monetary Value"})
-        st.plotly_chart(fig)
-    else:
+    # Visualize the segmentation
+    fig = px.scatter(rfm, x='Recency', y='Frequency', size='Monetary',
+                     color='Customer type', title="Customer Segmentation (RFM Analysis)",
+                     labels={"Recency": "Days Since Last Purchase",
+                             "Frequency": "Purchase Frequency",
+                             "Monetary": "Total Monetary Value"})
+    st.plotly_chart(fig)
+else:
         st.write("The dataset does not contain 'Custom type' information for segmentation.")
