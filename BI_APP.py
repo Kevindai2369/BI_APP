@@ -163,7 +163,7 @@ if options == "Advanced Insights":
                             "Monetary": "Total Monetary Value"})
     st.plotly_chart(fig)
 else:
-        st.write("The dataset does not contain 'Custom type' information for segmentation.")
+    st.write("The dataset does not contain 'Custom type' information for segmentation.")
 
 # Profitability Prediction
 if options == "Profitability Prediction":
