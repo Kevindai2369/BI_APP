@@ -5,9 +5,10 @@ import seaborn as sns
 import plotly.express as px
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor,RandomForestClassifier
 from sklearn.svm import SVR
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error,accuracy_score
+from sklearn.preprocessing import LabelEncoder
 
 # Load data
 @st.cache_data
@@ -163,3 +164,59 @@ if options == "Advanced Insights":
     st.plotly_chart(fig)
 else:
         st.write("The dataset does not contain 'Custom type' information for segmentation.")
+
+# Profitability Prediction
+if options == "Profitability Prediction":
+    st.header("Profitability Prediction")
+
+    # Feature engineering
+    data['Branch_Encoded'] = LabelEncoder().fit_transform(data['Branch'])
+    X = data[['Total', 'cogs', 'Branch_Encoded']]
+    y = data['Profit Margin %']
+
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Model selection
+    model = RandomForestRegressor(random_state=42)
+    model.fit(X_train, y_train)
+
+    # Predictions
+    y_pred = model.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    st.write(f"Mean Squared Error for Profitability Prediction: {mse:.2f}")
+
+    # Feature importance visualization
+    importance = pd.DataFrame({
+        'Feature': X.columns,
+        'Importance': model.feature_importances_
+    }).sort_values(by='Importance', ascending=False)
+
+    fig = px.bar(importance, x='Feature', y='Importance', title='Feature Importance')
+    st.plotly_chart(fig)
+
+# Customer Behavior Prediction
+if options == "Customer Behavior Prediction":
+    st.header("Customer Behavior Prediction")
+
+    # Feature engineering
+    data['Customer_Type_Encoded'] = LabelEncoder().fit_transform(data['Customer_Type'])
+    X = data[['Total', 'Unit price', 'Quantity']]
+    y = data['Customer_Type_Encoded']
+
+    # Train-test split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Model selection
+    model = RandomForestClassifier(random_state=42)
+    model.fit(X_train, y_train)
+
+    # Predictions
+    y_pred = model.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    st.write(f"Accuracy for Customer Behavior Prediction: {accuracy:.2f}")
+
+    # Confusion matrix visualization
+    st.subheader("Confusion Matrix")
+    conf_matrix = pd.crosstab(y_test, y_pred, rownames=['Actual'], colnames=['Predicted'])
+    st.write(conf_matrix)
