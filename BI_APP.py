@@ -5,9 +5,9 @@ import seaborn as sns
 import plotly.express as px
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor,RandomForestClassifier
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.svm import SVR
-from sklearn.metrics import mean_squared_error,accuracy_score
+from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.preprocessing import LabelEncoder
 
 # Load data
@@ -19,18 +19,25 @@ def load_data():
 # Initialize data
 data = load_data()
 
+# Verify dataset columns
+st.write("Columns in the dataset:", data.columns)
+
+# Convert Date column to datetime
+if 'Date' in data.columns:
+    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+
 # Streamlit app setup
 st.title("Business Intelligence Dashboard")
 st.sidebar.header("Navigation")
 options = st.sidebar.radio(
     "Select a feature to explore:",
-    ["Dataset Overview", "EDA", "Sales Trends", "Prediction", "Advanced Insights","Profitability Prediction","Customer Behavior Prediction"]
+    ["Dataset Overview", "EDA", "Sales Trends", "Prediction", "Advanced Insights", "Profitability Prediction", "Customer Behavior Prediction"]
 )
 
 # Sidebar filters
 st.sidebar.subheader("Filter Data")
-branch_filter = st.sidebar.multiselect("Select Branch(es):", data['Branch'].unique())
-product_filter = st.sidebar.multiselect("Select Product Line(s):", data['Product_Line'].unique())
+branch_filter = st.sidebar.multiselect("Select Branch(es):", data['Branch'].unique() if 'Branch' in data.columns else [])
+product_filter = st.sidebar.multiselect("Select Product Line(s):", data['Product line'].unique() if 'Product line' in data.columns else [])
 date_filter = st.sidebar.date_input("Select Date Range:", [])
 
 # Apply filters
@@ -40,8 +47,8 @@ if branch_filter:
 if product_filter:
     filtered_data = filtered_data[filtered_data['Product line'].isin(product_filter)]
 if date_filter:
-    if isinstance(date_filter, list) and len(date_filter) == 2:
-        filtered_data = filtered_data[(filtered_data['Date'] >= pd.to_datetime(date_filter[0])) & 
+    if isinstance(date_filter, list) and len(date_filter) == 2 and 'Date' in filtered_data.columns:
+        filtered_data = filtered_data[(filtered_data['Date'] >= pd.to_datetime(date_filter[0])) &
                                       (filtered_data['Date'] <= pd.to_datetime(date_filter[1]))]
 
 # Dataset Overview
@@ -62,161 +69,154 @@ if options == "EDA":
     # Correlation heatmap
     st.subheader("Correlation Heatmap")
     numeric_data = filtered_data.select_dtypes(include=['number'])
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm", ax=ax)
-    st.pyplot(fig)
+    if not numeric_data.empty:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm", ax=ax)
+        st.pyplot(fig)
+    else:
+        st.write("No numeric data available for correlation analysis.")
 
     # Pareto Analysis
     st.subheader("Pareto Analysis: Top Products")
-    sales_by_product = filtered_data.groupby('Product line')['Total'].sum().reset_index()
-    sales_by_product['Cumulative Percentage'] = sales_by_product['Total'].cumsum() / sales_by_product['Total'].sum() * 100
+    if 'Product line' in filtered_data.columns and 'Total' in filtered_data.columns:
+        sales_by_product = filtered_data.groupby('Product line')['Total'].sum().reset_index()
+        sales_by_product['Cumulative Percentage'] = sales_by_product['Total'].cumsum() / sales_by_product['Total'].sum() * 100
 
-    fig = px.bar(sales_by_product, x='Product line', y='Total', text='Cumulative Percentage',
-                 title="Pareto Analysis of Sales by Product Line")
-    st.plotly_chart(fig)
+        fig = px.bar(sales_by_product, x='Product line', y='Total', text='Cumulative Percentage',
+                     title="Pareto Analysis of Sales by Product Line")
+        st.plotly_chart(fig)
+    else:
+        st.write("Required columns for Pareto Analysis are missing.")
 
 # Sales Trends
 if options == "Sales Trends":
     st.header("Sales Trends")
 
-    # Convert date column
-    filtered_data['Date'] = pd.to_datetime(filtered_data['Date'])
-    sales_trend = filtered_data.groupby('Date')['Total'].sum().reset_index()
+    if 'Date' in filtered_data.columns and 'Total' in filtered_data.columns:
+        # Sales trends plot
+        sales_trend = filtered_data.groupby('Date')['Total'].sum().reset_index()
+        fig = px.line(sales_trend, x='Date', y='Total', title='Sales Over Time', labels={"Date": "Date", "Total": "Total Sales"})
+        st.plotly_chart(fig)
 
-    # Sales trends plot
-    fig = px.line(sales_trend, x='Date', y='Total', title='Sales Over Time', labels={"Date": "Date", "Total": "Total Sales"})
-    st.plotly_chart(fig)
+        # Seasonality Analysis
+        st.subheader("Seasonality Analysis")
+        filtered_data['Month'] = filtered_data['Date'].dt.month
+        seasonality = filtered_data.groupby('Month')['Total'].mean().reset_index()
 
-    # Seasonality Analysis
-    st.subheader("Seasonality Analysis")
-    filtered_data['Month'] = filtered_data['Date'].dt.month
-    seasonality = filtered_data.groupby('Month')['Total'].mean().reset_index()
-
-    fig = px.line(seasonality, x='Month', y='Total', title="Average Monthly Sales",
-                  labels={"Month": "Month", "Total": "Average Sales"})
-    st.plotly_chart(fig)
+        fig = px.line(seasonality, x='Month', y='Total', title="Average Monthly Sales",
+                      labels={"Month": "Month", "Total": "Average Sales"})
+        st.plotly_chart(fig)
+    else:
+        st.write("Date or Total column is missing for sales trend analysis.")
 
 # Predictive Analytics
 if options == "Prediction":
     st.header("Predict Future Sales")
 
-    # Ensure the 'Date' column is datetime
-    filtered_data['Date'] = pd.to_datetime(filtered_data['Date'])
-    sales_trend = filtered_data.groupby('Date')['Total'].sum().reset_index()
-    sales_trend['Day'] = sales_trend['Date'].dt.dayofyear
+    if 'Date' in filtered_data.columns and 'Total' in filtered_data.columns:
+        sales_trend = filtered_data.groupby('Date')['Total'].sum().reset_index()
+        sales_trend['Day'] = sales_trend['Date'].dt.dayofyear
 
-    # Prepare data for prediction
-    X = sales_trend[['Day']]
-    y = sales_trend['Total']
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Prepare data for prediction
+        X = sales_trend[['Day']]
+        y = sales_trend['Total']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Model selection
-    model_option = st.selectbox("Select Prediction Model:", ["Linear Regression", "Random Forest", "Support Vector Machine"])
-    if model_option == "Linear Regression":
-        model = LinearRegression()
-    elif model_option == "Random Forest":
-        model = RandomForestRegressor()
-    elif model_option == "Support Vector Machine":
-        model = SVR()
+        # Model selection
+        model_option = st.selectbox("Select Prediction Model:", ["Linear Regression", "Random Forest", "Support Vector Machine"])
+        if model_option == "Linear Regression":
+            model = LinearRegression()
+        elif model_option == "Random Forest":
+            model = RandomForestRegressor()
+        elif model_option == "Support Vector Machine":
+            model = SVR()
 
-    # Train and evaluate model
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    st.write(f"Mean Squared Error using {model_option}: {mse:.2f}")
+        # Train and evaluate model
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        mse = mean_squared_error(y_test, y_pred)
+        st.write(f"Mean Squared Error using {model_option}: {mse:.2f}")
 
-    # Future predictions
-    future_days = pd.DataFrame({'Day': range(1, 366)})
-    future_sales = model.predict(future_days)
+        # Future predictions
+        future_days = pd.DataFrame({'Day': range(1, 366)})
+        future_sales = model.predict(future_days)
 
-    # Plot future sales
-    fig = px.line(x=future_days['Day'], y=future_sales, title='Predicted Sales for Next Year',
-                  labels={"x": "Day of Year", "y": "Predicted Sales"})
-    st.plotly_chart(fig)
+        # Plot future sales
+        fig = px.line(x=future_days['Day'], y=future_sales, title='Predicted Sales for Next Year',
+                      labels={"x": "Day of Year", "y": "Predicted Sales"})
+        st.plotly_chart(fig)
+    else:
+        st.write("Date or Total column is missing for prediction.")
 
 # Advanced Insights
 if options == "Advanced Insights":
     st.header("Advanced Insights")
 
     # Gross Margin Analysis
-    st.subheader("Gross Margin Analysis")
-    filtered_data['Gross Margin'] = (filtered_data['Total'] - filtered_data['cogs']) / filtered_data['Total'] * 100
-    margin_summary = filtered_data.groupby('Product_Line')['Gross Margin'].mean().reset_index()
+    if 'Total' in filtered_data.columns and 'cogs' in filtered_data.columns:
+        filtered_data['Gross Margin'] = (filtered_data['Total'] - filtered_data['cogs']) / filtered_data['Total'] * 100
+        margin_summary = filtered_data.groupby('Product line')['Gross Margin'].mean().reset_index()
 
-    fig = px.bar(margin_summary, x='Product_Line', y='Gross Margin', title="Average Gross Margin by Product Line",
-                 labels={"Gross Margin": "Gross Margin (%)"})
-    st.plotly_chart(fig)
-
-    # RFM Analysis using 'Customer_Type'
-    st.subheader("Customer Segmentation (RFM Analysis)")
-    rfm = filtered_data.groupby('Customer_Type').agg(
-        Recency=('Transaction_Date', lambda x: (pd.to_datetime('today') - pd.to_datetime(x).max()).days),
-        Frequency=('InvoiceID', 'count'),  # Assuming 'InvoiceID' indicates transactions
-        Monetary=('Total_Amount', 'sum')
-    ).reset_index()
-
-    # Visualize the segmentation
-    fig = px.scatter(rfm, x='Recency', y='Frequency', size='Monetary',
-                    color='Customer_Type', title="Customer Segmentation (RFM Analysis)",
-                    labels={"Recency": "Days Since Last Purchase",
-                            "Frequency": "Purchase Frequency",
-                            "Monetary": "Total Monetary Value"})
-    st.plotly_chart(fig)
-else:
-    st.write("The dataset does not contain 'Custom type' information for segmentation.")
+        fig = px.bar(margin_summary, x='Product line', y='Gross Margin', title="Average Gross Margin by Product Line",
+                     labels={"Gross Margin": "Gross Margin (%)"})
+        st.plotly_chart(fig)
+    else:
+        st.write("Required columns for Gross Margin Analysis are missing.")
 
 # Profitability Prediction
 if options == "Profitability Prediction":
     st.header("Profitability Prediction")
 
-    # Feature engineering
-    data['Branch_Encoded'] = LabelEncoder().fit_transform(data['Branch'])
-    X = data[['Total', 'cogs', 'Branch_Encoded']]
-    y = data['Profit Margin %']
+    if 'Total' in data.columns and 'cogs' in data.columns:
+        data['Profit Margin %'] = (data['Total'] - data['cogs']) / data['cogs'] * 100
+        data['Branch_Encoded'] = LabelEncoder().fit_transform(data['Branch'])
 
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        X = data[['Total', 'cogs', 'Branch_Encoded']]
+        y = data['Profit Margin %']
 
-    # Model selection
-    model = RandomForestRegressor(random_state=42)
-    model.fit(X_train, y_train)
+        # Train-test split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Predictions
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    st.write(f"Mean Squared Error for Profitability Prediction: {mse:.2f}")
+        # Model training and prediction
+        model = RandomForestRegressor(random_state=42)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        mse = mean_squared_error(y_test, y_pred)
+        st.write(f"Mean Squared Error for Profitability Prediction: {mse:.2f}")
 
-    # Feature importance visualization
-    importance = pd.DataFrame({
-        'Feature': X.columns,
-        'Importance': model.feature_importances_
-    }).sort_values(by='Importance', ascending=False)
+        # Feature importance visualization
+        importance = pd.DataFrame({
+            'Feature': X.columns,
+            'Importance': model.feature_importances_
+        }).sort_values(by='Importance', ascending=False)
 
-    fig = px.bar(importance, x='Feature', y='Importance', title='Feature Importance')
-    st.plotly_chart(fig)
+        fig = px.bar(importance, x='Feature', y='Importance', title='Feature Importance')
+        st.plotly_chart(fig)
+    else:
+        st.write("Required columns for Profitability Prediction are missing.")
 
 # Customer Behavior Prediction
 if options == "Customer Behavior Prediction":
     st.header("Customer Behavior Prediction")
 
-    # Feature engineering
-    data['Customer_Type_Encoded'] = LabelEncoder().fit_transform(data['Customer_Type'])
-    X = data[['Total', 'Unit_Price', 'Quantity']]
-    y = data['Customer_Type_Encoded']
+    if 'Customer_Type' in data.columns:
+        data['Customer_Type_Encoded'] = LabelEncoder().fit_transform(data['Customer_Type'])
+        X = data[['Total', 'Unit price', 'Quantity']]
+        y = data['Customer_Type_Encoded']
 
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Train-test split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Model selection
-    model = RandomForestClassifier(random_state=42)
-    model.fit(X_train, y_train)
+        # Model training and evaluation
+        model = RandomForestClassifier(random_state=42)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        st.write(f"Accuracy for Customer Behavior Prediction: {accuracy:.2f}")
 
-    # Predictions
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f"Accuracy for Customer Behavior Prediction: {accuracy:.2f}")
-
-    # Confusion matrix visualization
-    st.subheader("Confusion Matrix")
-    conf_matrix = pd.crosstab(y_test, y_pred, rownames=['Actual'], colnames=['Predicted'])
-    st.write(conf_matrix)
+        # Confusion matrix visualization
+        st.subheader("Confusion Matrix")
+        conf_matrix = pd.crosstab(y_test, y_pred, rownames=['Actual'], colnames=['Predicted'])
+        st.write(conf_matrix)
+    else:
+        st.write("Customer_Type column is missing for behavior prediction.")
