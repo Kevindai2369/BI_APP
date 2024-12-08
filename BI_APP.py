@@ -37,7 +37,7 @@ options = st.sidebar.radio(
 # Sidebar filters
 st.sidebar.subheader("Filter Data")
 branch_filter = st.sidebar.multiselect("Select Branch(es):", data['Branch'].unique() if 'Branch' in data.columns else [])
-product_filter = st.sidebar.multiselect("Select Product Line(s):", data['Product line'].unique() if 'Product line' in data.columns else [])
+product_filter = st.sidebar.multiselect("Select Product Line(s):", data['Product_Line'].unique() if 'Product_Line' in data.columns else [])
 date_filter = st.sidebar.date_input("Select Date Range:", [])
 
 # Apply filters
@@ -45,7 +45,7 @@ filtered_data = data.copy()
 if branch_filter:
     filtered_data = filtered_data[filtered_data['Branch'].isin(branch_filter)]
 if product_filter:
-    filtered_data = filtered_data[filtered_data['Product line'].isin(product_filter)]
+    filtered_data = filtered_data[filtered_data['Product_Line'].isin(product_filter)]
 if date_filter:
     if isinstance(date_filter, list) and len(date_filter) == 2 and 'Date' in filtered_data.columns:
         filtered_data = filtered_data[(filtered_data['Date'] >= pd.to_datetime(date_filter[0])) &
