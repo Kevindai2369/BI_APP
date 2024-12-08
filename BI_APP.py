@@ -24,7 +24,7 @@ st.title("Business Intelligence Dashboard")
 st.sidebar.header("Navigation")
 options = st.sidebar.radio(
     "Select a feature to explore:",
-    ["Dataset Overview", "EDA", "Sales Trends", "Prediction", "Advanced Insights"]
+    ["Dataset Overview", "EDA", "Sales Trends", "Prediction", "Advanced Insights","Profitability Prediction","Customer Behavior Prediction"]
 )
 
 # Sidebar filters
@@ -141,15 +141,15 @@ if options == "Advanced Insights":
     # Gross Margin Analysis
     st.subheader("Gross Margin Analysis")
     filtered_data['Gross Margin'] = (filtered_data['Total'] - filtered_data['cogs']) / filtered_data['Total'] * 100
-    margin_summary = filtered_data.groupby('Product line')['Gross Margin'].mean().reset_index()
+    margin_summary = filtered_data.groupby('Product_Line')['Gross Margin'].mean().reset_index()
 
-    fig = px.bar(margin_summary, x='Product line', y='Gross Margin', title="Average Gross Margin by Product Line",
+    fig = px.bar(margin_summary, x='Product_Line', y='Gross Margin', title="Average Gross Margin by Product Line",
                  labels={"Gross Margin": "Gross Margin (%)"})
     st.plotly_chart(fig)
 
     # RFM Analysis using 'Customer type'
     st.subheader("Customer Segmentation (RFM Analysis)")
-    rfm = filtered_data.groupby('Customer type').agg(
+    rfm = filtered_data.groupby('Customer_Type').agg(
         Recency=('Date', lambda x: (pd.to_datetime('today') - pd.to_datetime(x).max()).days),
         Frequency=('Invoice ID', 'count'),  # Assuming 'Invoice ID' indicates transactions
         Monetary=('Total', 'sum')
