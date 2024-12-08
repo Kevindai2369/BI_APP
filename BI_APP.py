@@ -201,7 +201,7 @@ if options == "Customer Behavior Prediction":
 
     # Feature engineering
     data['Customer_Type_Encoded'] = LabelEncoder().fit_transform(data['Customer_Type'])
-    X = data[['Total', 'Unit price', 'Quantity']]
+    X = data[['Total', 'Unit_Price', 'Quantity']]
     y = data['Customer_Type_Encoded']
 
     # Train-test split
