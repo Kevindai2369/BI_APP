@@ -13,7 +13,7 @@ from sklearn.preprocessing import LabelEncoder
 # Load data
 @st.cache_data
 def load_data():
-    file_path = "Updated_Walmart_Sales_Data_2022_2024_with_Complete_Months.csv"
+    file_path = "Modified_Walmart_Sales_Data_for_BI.csv"
     return pd.read_csv(file_path)
 
 # Initialize data
