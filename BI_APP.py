@@ -153,15 +153,20 @@ if options == "Advanced Insights":
     st.header("Advanced Insights")
 
     # Gross Margin Analysis
-    if 'Total' in filtered_data.columns and 'cogs' in filtered_data.columns:
-        filtered_data['Gross Margin'] = (filtered_data['Total'] - filtered_data['cogs']) / filtered_data['Total'] * 100
-        margin_summary = filtered_data.groupby('Product line')['Gross Margin'].mean().reset_index()
+    if 'Product_Line' in filtered_data.columns and 'Gross_Margin_Percentage' in filtered_data.columns:
+        st.subheader("Gross Margin Analysis")
 
-        fig = px.bar(margin_summary, x='Product line', y='Gross Margin', title="Average Gross Margin by Product Line",
-                     labels={"Gross Margin": "Gross Margin (%)"})
+        # Group by Product Line and calculate average Gross Margin
+        margin_summary = filtered_data.groupby('Product_Line')['Gross_Margin_Percentage'].mean().reset_index()
+
+        # Plot the Gross Margin Analysis
+        fig = px.bar(margin_summary, x='Product_Line', y='Gross_Margin_Percentage',
+                    title="Average Gross Margin by Product Line",
+                    labels={"Gross_Margin_Percentage": "Gross Margin (%)", "Product_Line": "Product Line"})
         st.plotly_chart(fig)
-    else:
-        st.write("Required columns for Gross Margin Analysis are missing.")
+else:
+    missing_columns = [col for col in ['Product_Line', 'Gross_Margin_Percentage'] if col not in filtered_data.columns]
+    st.write(f"Cannot perform Gross Margin Analysis. Missing column(s): {', '.join(missing_columns)}")
 
 # Profitability Prediction
 if options == "Profitability Prediction":
@@ -199,9 +204,16 @@ if options == "Profitability Prediction":
 if options == "Customer Behavior Prediction":
     st.header("Customer Behavior Prediction")
 
-    if 'Customer_Type' in data.columns:
+    # Ensure required columns exist
+    required_columns = ['Customer_Type', 'Total', 'Unit_Price', 'Quantity']
+    missing_columns = [col for col in required_columns if col not in data.columns]
+
+    if not missing_columns:
+        # Encode 'Customer_Type' column
         data['Customer_Type_Encoded'] = LabelEncoder().fit_transform(data['Customer_Type'])
-        X = data[['Total', 'Unit price', 'Quantity']]
+
+        # Prepare features and target variable
+        X = data[['Total', 'Unit_Price', 'Quantity']]
         y = data['Customer_Type_Encoded']
 
         # Train-test split
@@ -212,6 +224,8 @@ if options == "Customer Behavior Prediction":
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
+
+        # Display accuracy
         st.write(f"Accuracy for Customer Behavior Prediction: {accuracy:.2f}")
 
         # Confusion matrix visualization
@@ -219,4 +233,7 @@ if options == "Customer Behavior Prediction":
         conf_matrix = pd.crosstab(y_test, y_pred, rownames=['Actual'], colnames=['Predicted'])
         st.write(conf_matrix)
     else:
-        st.write("Customer_Type column is missing for behavior prediction.")
+        # Display missing columns
+        st.error(f"The dataset is missing required columns: {', '.join(missing_columns)}")
+        st.write("Please ensure the following columns are present in the dataset:")
+        st.write(", ".join(required_columns))
