@@ -30,7 +30,7 @@ options = st.sidebar.radio(
 # Sidebar filters
 st.sidebar.subheader("Filter Data")
 branch_filter = st.sidebar.multiselect("Select Branch(es):", data['Branch'].unique())
-product_filter = st.sidebar.multiselect("Select Product Line(s):", data['Product_line'].unique())
+product_filter = st.sidebar.multiselect("Select Product Line(s):", data['Product_Line'].unique())
 date_filter = st.sidebar.date_input("Select Date Range:", [])
 
 # Apply filters
