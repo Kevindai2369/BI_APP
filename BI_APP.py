@@ -167,21 +167,29 @@ if options == "Prediction":
 if options == "Advanced Insights":
     st.header("Advanced Insights")
 
-    # Gross Margin Analysis
-    if 'Product_Line' in filtered_data.columns and 'Gross_Margin_Percentage' in filtered_data.columns:
+    # Check for required columns
+    required_columns = ['Product_Line', 'Gross_Margin_Percentage']
+    missing_columns = [col for col in required_columns if col not in filtered_data.columns]
+
+    if not missing_columns:
         st.subheader("Gross Margin Analysis")
 
         # Group by Product Line and calculate average Gross Margin
         margin_summary = filtered_data.groupby('Product_Line')['Gross_Margin_Percentage'].mean().reset_index()
 
         # Plot the Gross Margin Analysis
-        fig = px.bar(margin_summary, x='Product_Line', y='Gross_Margin_Percentage',
-                    title="Average Gross Margin by Product Line",
-                    labels={"Gross_Margin_Percentage": "Gross Margin (%)", "Product_Line": "Product Line"})
+        fig = px.bar(
+            margin_summary,
+            x='Product_Line',
+            y='Gross_Margin_Percentage',
+            title="Average Gross Margin by Product Line",
+            labels={"Gross_Margin_Percentage": "Gross Margin (%)", "Product_Line": "Product Line"}
+        )
         st.plotly_chart(fig)
-else:
-    missing_columns = [col for col in ['Product_Line', 'Gross_Margin_Percentage'] if col not in filtered_data.columns]
-    st.write(f"Cannot perform Gross Margin Analysis. Missing column(s): {', '.join(missing_columns)}")
+    else:
+        # Display missing columns
+        st.error(f"Cannot perform Gross Margin Analysis. Missing column(s): {', '.join(missing_columns)}")
+
 
 # Profitability Prediction
 if options == "Profitability Prediction":
