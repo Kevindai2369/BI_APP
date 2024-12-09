@@ -10,21 +10,44 @@ from sklearn.svm import SVR
 from sklearn.metrics import mean_squared_error, accuracy_score
 from sklearn.preprocessing import LabelEncoder
 
-# Load data
+# Load and preprocess data
 @st.cache_data
 def load_data():
     file_path = "Modified_Walmart_Sales_Data_for_BI.csv"
-    return pd.read_csv(file_path)
+    data = pd.read_csv(file_path)
+    return preprocess_data(data)
 
-# Initialize data
+# Preprocessing function
+def preprocess_data(data):
+    # Handle missing values for numeric columns
+    num_cols = ['Unit_Price', 'Quantity', 'Tax_5', 'Total', 'cogs', 'Gross_Income', 'Rating']
+    for col in num_cols:
+        if col in data.columns:
+            data[col].fillna(data[col].mean(), inplace=True)
+
+    # Handle missing values for categorical columns
+    cat_cols = ['Invoice_ID', 'Branch', 'City', 'Customer_Type', 'Gender', 'Product_Line', 'Payment']
+    for col in cat_cols:
+        if col in data.columns:
+            data[col].fillna("Unknown", inplace=True)
+
+    # Convert 'Date' to datetime format
+    if 'Date' in data.columns:
+        data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
+
+    # Extract Year, Month, and Day for easier analysis
+    if 'Date' in data.columns:
+        data['Year'] = data['Date'].dt.year
+        data['Month'] = data['Date'].dt.month
+        data['Day'] = data['Date'].dt.day
+
+    return data
+
+# Load and initialize the data
 data = load_data()
 
 # Verify dataset columns
 st.write("Columns in the dataset:", data.columns)
-
-# Convert Date column to datetime
-if 'Date' in data.columns:
-    data['Date'] = pd.to_datetime(data['Date'], errors='coerce')
 
 # Streamlit app setup
 st.title("Business Intelligence Dashboard")
@@ -57,12 +80,10 @@ if options == "Dataset Overview":
     st.write("Filtered Dataset:")
     st.write(filtered_data.head())
     st.write("Shape of the dataset:", filtered_data.shape)
-
-    # Basic statistics
     st.subheader("Summary Statistics")
     st.write(filtered_data.describe())
 
-# Exploratory Data Analysis (EDA)
+# EDA
 if options == "EDA":
     st.header("Exploratory Data Analysis")
 
@@ -78,11 +99,10 @@ if options == "EDA":
 
     # Pareto Analysis
     st.subheader("Pareto Analysis: Top Products")
-    if 'Product line' in filtered_data.columns and 'Total' in filtered_data.columns:
-        sales_by_product = filtered_data.groupby('Product line')['Total'].sum().reset_index()
+    if 'Product_Line' in filtered_data.columns and 'Total' in filtered_data.columns:
+        sales_by_product = filtered_data.groupby('Product_Line')['Total'].sum().reset_index()
         sales_by_product['Cumulative Percentage'] = sales_by_product['Total'].cumsum() / sales_by_product['Total'].sum() * 100
-
-        fig = px.bar(sales_by_product, x='Product line', y='Total', text='Cumulative Percentage',
+        fig = px.bar(sales_by_product, x='Product_Line', y='Total', text='Cumulative Percentage',
                      title="Pareto Analysis of Sales by Product Line")
         st.plotly_chart(fig)
     else:
@@ -102,22 +122,19 @@ if options == "Sales Trends":
         st.subheader("Seasonality Analysis")
         filtered_data['Month'] = filtered_data['Date'].dt.month
         seasonality = filtered_data.groupby('Month')['Total'].mean().reset_index()
-
         fig = px.line(seasonality, x='Month', y='Total', title="Average Monthly Sales",
                       labels={"Month": "Month", "Total": "Average Sales"})
         st.plotly_chart(fig)
     else:
         st.write("Date or Total column is missing for sales trend analysis.")
 
-# Predictive Analytics
+# Prediction
 if options == "Prediction":
     st.header("Predict Future Sales")
 
     if 'Date' in filtered_data.columns and 'Total' in filtered_data.columns:
         sales_trend = filtered_data.groupby('Date')['Total'].sum().reset_index()
         sales_trend['Day'] = sales_trend['Date'].dt.dayofyear
-
-        # Prepare data for prediction
         X = sales_trend[['Day']]
         y = sales_trend['Total']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -140,8 +157,6 @@ if options == "Prediction":
         # Future predictions
         future_days = pd.DataFrame({'Day': range(1, 366)})
         future_sales = model.predict(future_days)
-
-        # Plot future sales
         fig = px.line(x=future_days['Day'], y=future_sales, title='Predicted Sales for Next Year',
                       labels={"x": "Day of Year", "y": "Predicted Sales"})
         st.plotly_chart(fig)
